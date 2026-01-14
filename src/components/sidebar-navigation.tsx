@@ -135,7 +135,7 @@ export default function SidebarNavigation({
 
   const handleClick = (item: MenuItem) => {
     if (item.label === "Reports") {
-      router.push("/reports/business");
+      router.push("/business-reports");
       if (onNavigate) onNavigate();
     }
   };
@@ -178,7 +178,7 @@ export default function SidebarNavigation({
                             item.label === "Reports" &&
                             subitem === "Business Reports"
                           ) {
-                            router.push("/reports/business");
+                            router.push("/business-reports");
                             if (onNavigate) onNavigate();
                           }
                         }}
