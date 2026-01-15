@@ -76,29 +76,57 @@ const formatPercent = (value: number | null): string => {
   return `${sign}${value.toFixed(1)}%`;
 };
 
-// Generate realistic sales data with proper scaling
-const generateSalesData = (
-  daysInPeriod: number,
-  variance: number = 0.15
+// Fixed baseline data generator (consistent results for each preset)
+const getBaselineData = (
+  preset: DatePreset,
+  refreshSeed: number = 0
 ): SalesMetrics => {
-  // Base daily metrics (realistic for a mid-sized seller)
-  const baseDailyOrders = 45; // Average orders per day
-  const baseDailyUnitsMultiplier = 1.2; // Slightly more units than orders
-  const baseAvgOrderValue = 75; // Average order value $75
+  // BASE: $1,884 per day (fixed baseline)
+  const baseDailySales = 1884;
+  const baseDailyOrders = 24; // 24 orders per day
+  const baseDailyUnits = 29; // ~1.21x orders
 
-  // Add controlled randomness (±15% by default)
-  const randomFactor = 1 + (Math.random() - 0.5) * variance * 2;
+  // Get number of days for the preset
+  let days: number;
+  switch (preset) {
+    case "today":
+      days = 0.5; // Today = 0.5 days (partial day, "today so far")
+      break;
+    case "yesterday":
+      days = 1; // Yesterday = 1 full day
+      break;
+    case "last7days":
+      days = 7;
+      break;
+    case "last30days":
+      days = 30;
+      break;
+    case "mtd":
+      days = new Date().getDate(); // Current day of month (e.g., 14)
+      break;
+    case "ytd":
+      const today = new Date();
+      const startOfYear = new Date(today.getFullYear(), 0, 1);
+      days =
+        Math.floor(
+          (today.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)
+        ) + 1;
+      break;
+    default:
+      days = 1;
+  }
 
-  // Calculate metrics based on number of days
-  const totalOrderItems = Math.floor(
-    baseDailyOrders * daysInPeriod * randomFactor
-  );
-  const unitsOrdered = Math.floor(
-    totalOrderItems * baseDailyUnitsMultiplier * (0.95 + Math.random() * 0.1)
-  );
-  const avgSalesPerOrder = baseAvgOrderValue * (0.9 + Math.random() * 0.2); // $67.50-$90
-  const orderedProductSales = totalOrderItems * avgSalesPerOrder;
+  // Only apply small variance when refresh button is clicked (using refreshSeed)
+  // This creates a deterministic "refresh" effect
+  const refreshVariance = refreshSeed > 0 ? Math.sin(refreshSeed) * 0.03 : 0; // ±3% max
+  const varianceFactor = 1 + refreshVariance;
+
+  // Calculate metrics by multiplying base daily values by number of days
+  const totalOrderItems = Math.floor(baseDailyOrders * days * varianceFactor);
+  const unitsOrdered = Math.floor(baseDailyUnits * days * varianceFactor);
+  const orderedProductSales = baseDailySales * days * varianceFactor;
   const avgUnitsPerOrder = unitsOrdered / totalOrderItems;
+  const avgSalesPerOrder = orderedProductSales / totalOrderItems;
 
   return {
     totalOrderItems,
@@ -106,6 +134,20 @@ const generateSalesData = (
     orderedProductSales,
     avgUnitsPerOrder,
     avgSalesPerOrder,
+  };
+};
+
+// Apply growth factor to create past period data (always lower than current)
+const applyGrowthFactor = (
+  data: SalesMetrics,
+  factor: number
+): SalesMetrics => {
+  return {
+    totalOrderItems: Math.floor(data.totalOrderItems * factor),
+    unitsOrdered: Math.floor(data.unitsOrdered * factor),
+    orderedProductSales: data.orderedProductSales * factor,
+    avgUnitsPerOrder: data.avgUnitsPerOrder,
+    avgSalesPerOrder: data.avgSalesPerOrder,
   };
 };
 
@@ -162,37 +204,24 @@ const getDatePresetLabel = (preset: DatePreset): string => {
 // Get comparison rows based on date preset
 const getComparisonRows = (
   preset: DatePreset,
-  currentData: SalesMetrics
+  currentData: SalesMetrics,
+  refreshSeed: number
 ): ComparisonRow[] => {
   switch (preset) {
     case "today":
-      // Today is partial day, yesterday is full day, so yesterday should be higher
-      const yesterday = generateSalesData(1, 0.12);
-      const lastWeekSameDay = generateSalesData(1, 0.12);
-      const lastYearSameDay = generateSalesData(1, 0.15);
-
-      // Apply growth factors (current period typically higher than past)
-      yesterday.totalOrderItems = Math.floor(yesterday.totalOrderItems * 0.92);
-      yesterday.unitsOrdered = Math.floor(yesterday.unitsOrdered * 0.92);
-      yesterday.orderedProductSales = yesterday.orderedProductSales * 0.92;
-
-      lastWeekSameDay.totalOrderItems = Math.floor(
-        lastWeekSameDay.totalOrderItems * 0.85
+      // Generate consistent past period data
+      const yesterday = applyGrowthFactor(
+        getBaselineData("yesterday", refreshSeed),
+        0.93
       );
-      lastWeekSameDay.unitsOrdered = Math.floor(
-        lastWeekSameDay.unitsOrdered * 0.85
+      const lastWeekSameDay = applyGrowthFactor(
+        getBaselineData("yesterday", refreshSeed),
+        0.87
       );
-      lastWeekSameDay.orderedProductSales =
-        lastWeekSameDay.orderedProductSales * 0.85;
-
-      lastYearSameDay.totalOrderItems = Math.floor(
-        lastYearSameDay.totalOrderItems * 0.7
+      const lastYearSameDay = applyGrowthFactor(
+        getBaselineData("yesterday", refreshSeed),
+        0.72
       );
-      lastYearSameDay.unitsOrdered = Math.floor(
-        lastYearSameDay.unitsOrdered * 0.7
-      );
-      lastYearSameDay.orderedProductSales =
-        lastYearSameDay.orderedProductSales * 0.7;
 
       return [
         { label: "Today so far", metrics: currentData },
@@ -280,36 +309,18 @@ const getComparisonRows = (
       ];
 
     case "yesterday":
-      const dayBeforeYesterday = generateSalesData(1, 0.12);
-      const lastWeekYesterday = generateSalesData(1, 0.12);
-      const lastYearYesterday = generateSalesData(1, 0.15);
-
-      dayBeforeYesterday.totalOrderItems = Math.floor(
-        dayBeforeYesterday.totalOrderItems * 0.93
+      const dayBeforeYesterday = applyGrowthFactor(
+        getBaselineData("yesterday", refreshSeed),
+        0.94
       );
-      dayBeforeYesterday.unitsOrdered = Math.floor(
-        dayBeforeYesterday.unitsOrdered * 0.93
+      const lastWeekYesterday = applyGrowthFactor(
+        getBaselineData("yesterday", refreshSeed),
+        0.88
       );
-      dayBeforeYesterday.orderedProductSales =
-        dayBeforeYesterday.orderedProductSales * 0.93;
-
-      lastWeekYesterday.totalOrderItems = Math.floor(
-        lastWeekYesterday.totalOrderItems * 0.87
+      const lastYearYesterday = applyGrowthFactor(
+        getBaselineData("yesterday", refreshSeed),
+        0.73
       );
-      lastWeekYesterday.unitsOrdered = Math.floor(
-        lastWeekYesterday.unitsOrdered * 0.87
-      );
-      lastWeekYesterday.orderedProductSales =
-        lastWeekYesterday.orderedProductSales * 0.87;
-
-      lastYearYesterday.totalOrderItems = Math.floor(
-        lastYearYesterday.totalOrderItems * 0.72
-      );
-      lastYearYesterday.unitsOrdered = Math.floor(
-        lastYearYesterday.unitsOrdered * 0.72
-      );
-      lastYearYesterday.orderedProductSales =
-        lastYearYesterday.orderedProductSales * 0.72;
 
       return [
         { label: "Yesterday", metrics: currentData },
@@ -397,21 +408,14 @@ const getComparisonRows = (
       ];
 
     case "last7days":
-      const previousWeek = generateSalesData(7, 0.12);
-      const lastYearWeek = generateSalesData(7, 0.15);
-
-      previousWeek.totalOrderItems = Math.floor(
-        previousWeek.totalOrderItems * 0.9
+      const previousWeek = applyGrowthFactor(
+        getBaselineData("last7days", refreshSeed),
+        0.91
       );
-      previousWeek.unitsOrdered = Math.floor(previousWeek.unitsOrdered * 0.9);
-      previousWeek.orderedProductSales = previousWeek.orderedProductSales * 0.9;
-
-      lastYearWeek.totalOrderItems = Math.floor(
-        lastYearWeek.totalOrderItems * 0.75
+      const lastYearWeek = applyGrowthFactor(
+        getBaselineData("last7days", refreshSeed),
+        0.76
       );
-      lastYearWeek.unitsOrdered = Math.floor(lastYearWeek.unitsOrdered * 0.75);
-      lastYearWeek.orderedProductSales =
-        lastYearWeek.orderedProductSales * 0.75;
 
       return [
         { label: "This week so far", metrics: currentData },
@@ -472,26 +476,14 @@ const getComparisonRows = (
       ];
 
     case "last30days":
-      const previousMonth = generateSalesData(30, 0.12);
-      const lastYearMonth = generateSalesData(30, 0.15);
-
-      previousMonth.totalOrderItems = Math.floor(
-        previousMonth.totalOrderItems * 0.88
+      const previousMonth = applyGrowthFactor(
+        getBaselineData("last30days", refreshSeed),
+        0.89
       );
-      previousMonth.unitsOrdered = Math.floor(
-        previousMonth.unitsOrdered * 0.88
+      const lastYearMonth = applyGrowthFactor(
+        getBaselineData("last30days", refreshSeed),
+        0.74
       );
-      previousMonth.orderedProductSales =
-        previousMonth.orderedProductSales * 0.88;
-
-      lastYearMonth.totalOrderItems = Math.floor(
-        lastYearMonth.totalOrderItems * 0.73
-      );
-      lastYearMonth.unitsOrdered = Math.floor(
-        lastYearMonth.unitsOrdered * 0.73
-      );
-      lastYearMonth.orderedProductSales =
-        lastYearMonth.orderedProductSales * 0.73;
 
       return [
         { label: "Last 30 days", metrics: currentData },
@@ -552,25 +544,14 @@ const getComparisonRows = (
       ];
 
     case "mtd":
-      const today = new Date();
-      const daysInMonth = today.getDate();
-      const previousMonthSame = generateSalesData(daysInMonth, 0.12);
-      const lastYearMTD = generateSalesData(daysInMonth, 0.15);
-
-      previousMonthSame.totalOrderItems = Math.floor(
-        previousMonthSame.totalOrderItems * 0.89
+      const previousMonthSame = applyGrowthFactor(
+        getBaselineData("mtd", refreshSeed),
+        0.9
       );
-      previousMonthSame.unitsOrdered = Math.floor(
-        previousMonthSame.unitsOrdered * 0.89
+      const lastYearMTD = applyGrowthFactor(
+        getBaselineData("mtd", refreshSeed),
+        0.75
       );
-      previousMonthSame.orderedProductSales =
-        previousMonthSame.orderedProductSales * 0.89;
-
-      lastYearMTD.totalOrderItems = Math.floor(
-        lastYearMTD.totalOrderItems * 0.74
-      );
-      lastYearMTD.unitsOrdered = Math.floor(lastYearMTD.unitsOrdered * 0.74);
-      lastYearMTD.orderedProductSales = lastYearMTD.orderedProductSales * 0.74;
 
       return [
         { label: "Month to date", metrics: currentData },
@@ -631,19 +612,10 @@ const getComparisonRows = (
       ];
 
     case "ytd":
-      const currentDay = new Date();
-      const startOfYear = new Date(currentDay.getFullYear(), 0, 1);
-      const daysInYear =
-        Math.floor(
-          (currentDay.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)
-        ) + 1;
-      const lastYearYTD = generateSalesData(daysInYear, 0.15);
-
-      lastYearYTD.totalOrderItems = Math.floor(
-        lastYearYTD.totalOrderItems * 0.76
+      const lastYearYTD = applyGrowthFactor(
+        getBaselineData("ytd", refreshSeed),
+        0.77
       );
-      lastYearYTD.unitsOrdered = Math.floor(lastYearYTD.unitsOrdered * 0.76);
-      lastYearYTD.orderedProductSales = lastYearYTD.orderedProductSales * 0.76;
 
       return [
         { label: "Year to date", metrics: currentData },
@@ -681,32 +653,6 @@ const getComparisonRows = (
   }
 };
 
-// Get number of days for each preset
-const getDaysForPreset = (preset: DatePreset): number => {
-  switch (preset) {
-    case "today":
-      return 0.5; // Partial day (today so far)
-    case "yesterday":
-      return 1;
-    case "last7days":
-      return 7;
-    case "last30days":
-      return 30;
-    case "mtd":
-      return new Date().getDate();
-    case "ytd":
-      const today = new Date();
-      const startOfYear = new Date(today.getFullYear(), 0, 1);
-      const days =
-        Math.floor(
-          (today.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)
-        ) + 1;
-      return days;
-    default:
-      return 1;
-  }
-};
-
 function BusinessReportsPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showAlert1, setShowAlert1] = useState(true);
@@ -718,23 +664,25 @@ function BusinessReportsPage() {
   const [selectedPreset, setSelectedPreset] = useState<DatePreset>("today");
   const [appliedPreset, setAppliedPreset] = useState<DatePreset>("today");
   const [fulfillmentChannel, setFulfillmentChannel] = useState("both");
-  const [dataVersion, setDataVersion] = useState(0); // Force re-render on Apply
+  const [refreshSeed, setRefreshSeed] = useState(0); // Used for deterministic "refresh" variance
 
-  // Generate data based on APPLIED preset (not selected)
+  // Generate data based on APPLIED preset with fixed baseline
   const currentData = useMemo(() => {
-    const days = getDaysForPreset(appliedPreset);
-    return generateSalesData(days, 0.15);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appliedPreset, dataVersion]);
+    return getBaselineData(appliedPreset, refreshSeed);
+  }, [appliedPreset, refreshSeed]);
 
   const comparisonRows = useMemo(() => {
-    return getComparisonRows(appliedPreset, currentData);
-  }, [appliedPreset, currentData]);
+    return getComparisonRows(appliedPreset, currentData, refreshSeed);
+  }, [appliedPreset, currentData, refreshSeed]);
 
   const handleApply = () => {
-    // Apply the selected preset and regenerate data
+    // Apply the selected preset (data will be consistent for same preset)
     setAppliedPreset(selectedPreset);
-    setDataVersion((prev) => prev + 1);
+  };
+
+  const handleRefresh = () => {
+    // Increment refresh seed to create small variance (±3%)
+    setRefreshSeed((prev) => prev + 1);
   };
 
   // Get current timestamp
@@ -1049,7 +997,7 @@ function BusinessReportsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handleApply}
+                  onClick={handleRefresh}
                   className="border border-[#007587] px-3 py-1.5 rounded text-sm font-medium text-[#007587] hover:bg-gray-50"
                 >
                   Refresh

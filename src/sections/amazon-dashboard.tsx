@@ -1,8 +1,7 @@
 "use client";
-
 import { useState } from "react";
-
 import Image, { StaticImageData } from "next/image";
+
 import AmazonLogo from "../../public/icons/amazon-logo.svg";
 import SparleIcon from "../../public/icons/sparles-icon.svg";
 import FooterLogo from "../../public/icons/footer-amazon-logo.png";
@@ -45,7 +44,6 @@ export default function SellerCentralDashboard() {
     <div className="min-h-screen bg-[#FAFAFA]">
       <nav className="bg-[#002F36] text-white px-2 py-0 border-b border-b-gray-600">
         <div className="flex items-center justify-between h-14 px-4">
-          {/* Left side: Menu and Logo */}
           {/* Left side: Menu and Logo */}
           <div className="flex items-center gap-4">
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -402,7 +400,7 @@ export default function SellerCentralDashboard() {
             </div>
           </div>
 
-          <div className="flex-1">
+          <div className=" xl:flex-1">
             {/* Global Snapshot */}
             <div className="mb-8 p-3 border rounded-lg bg-white">
               {/* Header */}
@@ -420,7 +418,7 @@ export default function SellerCentralDashboard() {
               <div className="grid grid-cols-6 border border-gray-300 rounded-lg overflow-hidden bg-white">
                 <SnapshotCard
                   label="Sales"
-                  value="$582.56"
+                  value="$942.00"
                   subtitle="Today so far"
                   chart
                   rows={[
@@ -432,7 +430,7 @@ export default function SellerCentralDashboard() {
 
                 <SnapshotCard
                   label="Open Orders"
-                  value="6"
+                  value="13"
                   subtitle="Total Count"
                   active
                   rows={[
@@ -467,7 +465,7 @@ export default function SellerCentralDashboard() {
 
                 <SnapshotCard
                   label="Payments"
-                  value="$6,830"
+                  value="$16,830"
                   subtitle="Total Balance"
                 />
               </div>
@@ -662,8 +660,8 @@ export default function SellerCentralDashboard() {
                         sku="ASIN G02J0CWCC7"
                         skuCode="SKU Z0-A2BR-LDT1"
                         status="Active"
-                        inventory="4"
-                        inventoryType="FBM"
+                        inventory="60"
+                        inventoryType="FBA"
                         price="$27.00"
                         starred={true}
                         image={BoldImg}
@@ -673,9 +671,9 @@ export default function SellerCentralDashboard() {
                         sku="ASIN B07HP2GFWR"
                         skuCode="SKU VJ-6R7K-1RSV"
                         status="Active"
-                        inventory="14"
+                        inventory="22"
                         inventoryType="FBM"
-                        price="$6.37"
+                        price="$18.37"
                         starred={true}
                         image={CapImg}
                       />
@@ -684,9 +682,9 @@ export default function SellerCentralDashboard() {
                         sku="ASIN B07HP2GFWR"
                         skuCode="SKU PT-HJ9I-4HNX"
                         status="Active"
-                        inventory="6"
-                        inventoryType="FBM"
-                        price="$6.37"
+                        inventory="22"
+                        inventoryType="FBA"
+                        price="$22.00"
                         starred={true}
                         image={CapImg}
                       />
@@ -697,7 +695,7 @@ export default function SellerCentralDashboard() {
                         status="Active"
                         inventory="3"
                         inventoryType="FBM"
-                        price="$7.72"
+                        price="$34.72"
                         starred={true}
                         image={GloveImg}
                       />
@@ -706,9 +704,9 @@ export default function SellerCentralDashboard() {
                         sku="ASIN B08RBRCM3C"
                         skuCode="SKU 92-YF80-8K3M"
                         status="Active"
-                        inventory="5"
-                        inventoryType="FBM"
-                        price="$8.59"
+                        inventory="44"
+                        inventoryType="FBA"
+                        price="$23.34"
                         starred={true}
                         image={WeightedGloveImg}
                       />
