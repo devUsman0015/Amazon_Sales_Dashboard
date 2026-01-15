@@ -27,8 +27,7 @@ import { VscSparkleFilled } from "react-icons/vsc";
 import { AiFillLike } from "react-icons/ai";
 import { BiSolidDislike } from "react-icons/bi";
 import { MdOutlineContentCopy } from "react-icons/md";
-
-
+import Link from "next/link";
 
 // Types
 interface SalesMetrics {
@@ -786,7 +785,9 @@ function BusinessReportsPage() {
               </SheetContent>
             </Sheet>
             <div className="border-r-[1px] border-white/40 h-[30%] pr-2">
-              <Image src={AmazonLogo} alt="Amazon-Logo" />
+              <Link href={"/"}>
+                <Image src={AmazonLogo} alt="Amazon-Logo" />
+              </Link>
             </div>
           </div>
 
